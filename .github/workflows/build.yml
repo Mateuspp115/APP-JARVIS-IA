@@ -33,34 +33,39 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
-      - name: 🔧 Entrar na pasta do projeto
+      - name: 🔧 CORREÇÃO — Mover arquivos para a raiz
         run: |
           if [ -d "Termux-JARVIS-2.0.0-POSTHUMAN" ]; then
-            cd Termux-JARVIS-2.0.0-POSTHUMAN
-          elif [ -d "app" ]; then
-            cd .
+            echo "📂 Movendo arquivos da subpasta para a raiz..."
+            mv Termux-JARVIS-2.0.0-POSTHUMAN/* . 2>/dev/null || true
+            mv Termux-JARVIS-2.0.0-POSTHUMAN/.* . 2>/dev/null || true
+            rm -rf Termux-JARVIS-2.0.0-POSTHUMAN
+            echo "✅ Arquivos movidos com sucesso!"
+          fi
+      
+      - name: 🎯 Verificar se gradlew existe
+        run: |
+          if [ -f "gradlew" ]; then
+            echo "✅ gradlew encontrado na raiz!"
+            chmod +x gradlew
           else
-            echo "❌ Estrutura de pastas não reconhecida"
+            echo "❌ gradlew NÃO encontrado na raiz!"
+            echo "📁 Procurando em subpastas..."
+            find . -name "gradlew" -type f
             exit 1
           fi
-          echo "PWD=$(pwd)" >> $GITHUB_ENV
-      
-      - name: 🎯 Dar permissão ao gradlew
-        run: chmod +x gradlew
-        working-directory: ${{ env.PWD }}
       
       - name: 🏗️ Compilar APK (Debug)
         run: ./gradlew assembleDebug --no-daemon
-        working-directory: ${{ env.PWD }}
       
       - name: 📤 Upload do APK
         uses: actions/upload-artifact@v4
         with:
           name: Termux-JARVIS-2.0-APK
           path: |
+            app/build/outputs/apk/debug/app-debug.apk
             **/app/build/outputs/apk/debug/app-debug.apk
-            **/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          if-no-files-found: error
       
       - name: ✅ Notificação de sucesso
         if: success()
